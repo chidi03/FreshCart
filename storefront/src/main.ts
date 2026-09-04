@@ -1,3 +1,4 @@
+// Docker layer caching demonstration
 import { fetchProducts, placeOrder, type Product } from "./api";
 
 const productsEl = document.querySelector<HTMLElement>("#products")!;
