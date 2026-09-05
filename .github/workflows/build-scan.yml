@@ -1,0 +1,80 @@
+name: Build, Scan and Push Checkout API
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGISTRY: ${{ vars.GAR_LOCATION }}-docker.pkg.dev
+  IMAGE_URI: ${{ vars.GAR_LOCATION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/${{ vars.GAR_IMAGE }}:${{ github.sha }}
+
+jobs:
+  build-scan-push:
+    name: Build, Scan and Push
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Build commit-tagged image
+        run: docker build --tag "${IMAGE_URI}" ./checkout-api
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_URI }}
+          format: table
+          output: trivy-report.txt
+          exit-code: "1"
+          ignore-unfixed: "false"
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+
+      - name: Add Trivy report to workflow summary
+        if: always()
+        run: |
+          if [ -f trivy-report.txt ]; then
+            cat trivy-report.txt
+            {
+              echo "## Trivy HIGH/CRITICAL scan"
+              echo '```text'
+              cat trivy-report.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Log in to Artifact Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Push scanned image
+        run: docker push "${IMAGE_URI}"
+
+      - name: Record published image
+        run: |
+          {
+            echo "## Published image"
+            echo '```text'
+            echo "${IMAGE_URI}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
