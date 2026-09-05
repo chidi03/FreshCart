@@ -37,9 +37,20 @@ RUN addgroup -S appgroup \
 # Copy dependency files first
 COPY package*.json ./
 
-# Install production dependencies only
+
+# Install production dependencies, then remove package managers
+# that are not needed by the running API.
 RUN npm ci --omit=dev \
-    && npm cache clean --force
+    && npm cache clean --force \
+    && rm -rf /usr/local/lib/node_modules/npm \
+        /usr/local/lib/node_modules/corepack \
+        /usr/local/bin/npm \
+        /usr/local/bin/npx \
+        /usr/local/bin/corepack \
+        /opt/yarn-v1.22.22 \
+        /usr/local/bin/yarn \
+        /usr/local/bin/yarnpkg
+
 
 # Copy only the compiled application
 COPY --from=builder /app/dist ./dist
