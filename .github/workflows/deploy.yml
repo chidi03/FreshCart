@@ -1,0 +1,125 @@
+name: Deploy Checkout API
+
+on:
+  workflow_run:
+    workflows:
+      - Build, Scan and Push Checkout API
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  TF_DIR: infrastructure/terraform
+  IMAGE_URI: ${{ vars.GAR_LOCATION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/${{ vars.GAR_IMAGE }}:${{ github.event.workflow_run.head_sha }}
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: staging
+
+    steps:
+      - name: Check out deployed commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: "1.15.8"
+          terraform_wrapper: false
+
+      - name: Initialize Terraform
+        run: terraform -chdir="$TF_DIR" init -input=false
+
+      - name: Select staging state
+        run: terraform -chdir="$TF_DIR" workspace select default
+
+      - name: Plan staging deployment
+        run: |
+          terraform -chdir="$TF_DIR" plan \
+            -input=false \
+            -out=staging.tfplan \
+            -var="environment=dev" \
+            -var="container_image=$IMAGE_URI"
+
+      - name: Apply staging deployment
+        run: |
+          terraform -chdir="$TF_DIR" apply \
+            -input=false \
+            staging.tfplan
+
+      - name: Verify deployed image
+        run: |
+          DEPLOYED_IMAGE=$(terraform -chdir="$TF_DIR" output -raw deployed_image)
+
+          if [ "$DEPLOYED_IMAGE" != "$IMAGE_URI" ]; then
+            echo "Expected: $IMAGE_URI"
+            echo "Terraform state: $DEPLOYED_IMAGE"
+            exit 1
+          fi
+
+          echo "Verified deployed image: $DEPLOYED_IMAGE"
+
+      - name: Smoke test staging
+        id: smoke-test
+        run: |
+          STAGING_IP=$(terraform -chdir="$TF_DIR" output -raw load_balancer_ip)
+          STAGING_URL="http://$STAGING_IP/healthz"
+          RESPONSE_FILE=$(mktemp)
+
+          echo "Testing $STAGING_URL"
+
+          for attempt in $(seq 1 60); do
+            HTTP_STATUS=$(curl \
+              --silent \
+              --show-error \
+              --output "$RESPONSE_FILE" \
+              --write-out "%{http_code}" \
+              --max-time 10 \
+              "$STAGING_URL" || true)
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              cat "$RESPONSE_FILE"
+              echo
+              echo "Staging smoke test passed"
+              echo "staging_url=$STAGING_URL" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            echo "Attempt $attempt returned HTTP $HTTP_STATUS"
+            sleep 10
+          done
+
+          echo "Staging did not become healthy"
+          cat "$RESPONSE_FILE" || true
+          exit 1
+
+      - name: Record staging deployment
+        if: success()
+        run: |
+          {
+            echo "## Staging deployment"
+            echo
+            echo "- Image: \`$IMAGE_URI\`"
+            echo "- Health endpoint: ${{ steps.smoke-test.outputs.staging_url }}"
+            echo "- Result: passed"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -18,3 +18,8 @@ output "backend_instance_template" {
   description = "Backend instance template ID"
   value       = google_compute_instance_template.backend.id
 }
+
+output "deployed_image" {
+  description = "Exact container image configured for this environment"
+  value       = var.container_image
+}
