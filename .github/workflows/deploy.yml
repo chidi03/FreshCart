@@ -20,13 +20,15 @@ env:
   IMAGE_URI: ${{ vars.GAR_LOCATION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/${{ vars.GAR_IMAGE }}:${{ github.event.workflow_run.head_sha }}
 
 jobs:
-  deploy-staging:
+  deploy_staging:
     name: Deploy to Staging
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment:
       name: staging
+    outputs:
+      image_uri: ${{ steps.verify_image.outputs.image_uri }}
 
     steps:
       - name: Check out deployed commit
@@ -68,6 +70,7 @@ jobs:
             staging.tfplan
 
       - name: Verify deployed image
+        id: verify_image
         run: |
           DEPLOYED_IMAGE=$(terraform -chdir="$TF_DIR" output -raw deployed_image)
 
@@ -78,6 +81,7 @@ jobs:
           fi
 
           echo "Verified deployed image: $DEPLOYED_IMAGE"
+          echo "image_uri=$DEPLOYED_IMAGE" >> "$GITHUB_OUTPUT"
 
       - name: Smoke test staging
         id: smoke-test
@@ -121,5 +125,115 @@ jobs:
             echo
             echo "- Image: \`$IMAGE_URI\`"
             echo "- Health endpoint: ${{ steps.smoke-test.outputs.staging_url }}"
+            echo "- Result: passed"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+
+  deploy_production:
+    name: Deploy to Production
+    needs: deploy_staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment:
+      name: production
+    env:
+      IMAGE_URI: ${{ needs.deploy_staging.outputs.image_uri }}
+
+    steps:
+      - name: Check out deployed commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: "1.15.8"
+          terraform_wrapper: false
+
+      - name: Initialize Terraform
+        run: terraform -chdir="$TF_DIR" init -input=false
+
+      - name: Select production state
+        run: |
+          terraform -chdir="$TF_DIR" workspace \
+            select -or-create production
+
+      - name: Plan production deployment
+        run: |
+          terraform -chdir="$TF_DIR" plan \
+            -input=false \
+            -out=production.tfplan \
+            -var="environment=prod" \
+            -var="container_image=$IMAGE_URI"
+
+      - name: Apply production deployment
+        run: |
+          terraform -chdir="$TF_DIR" apply \
+            -input=false \
+            production.tfplan
+
+      - name: Verify promoted image
+        run: |
+          DEPLOYED_IMAGE=$(terraform -chdir="$TF_DIR" output -raw deployed_image)
+
+          if [ "$DEPLOYED_IMAGE" != "$IMAGE_URI" ]; then
+            echo "Staging image: $IMAGE_URI"
+            echo "Production state: $DEPLOYED_IMAGE"
+            exit 1
+          fi
+
+          echo "Verified production image: $DEPLOYED_IMAGE"
+
+      - name: Smoke test production
+        id: production_smoke_test
+        run: |
+          PRODUCTION_IP=$(terraform -chdir="$TF_DIR" output -raw load_balancer_ip)
+          PRODUCTION_URL="http://$PRODUCTION_IP/healthz"
+          RESPONSE_FILE=$(mktemp)
+
+          echo "Testing $PRODUCTION_URL"
+
+          for attempt in $(seq 1 60); do
+            HTTP_STATUS=$(curl \
+              --silent \
+              --show-error \
+              --output "$RESPONSE_FILE" \
+              --write-out "%{http_code}" \
+              --max-time 10 \
+              "$PRODUCTION_URL" || true)
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              cat "$RESPONSE_FILE"
+              echo
+              echo "Production smoke test passed"
+              echo "production_url=$PRODUCTION_URL" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            echo "Attempt $attempt returned HTTP $HTTP_STATUS"
+            sleep 10
+          done
+
+          echo "Production did not become healthy"
+          cat "$RESPONSE_FILE" || true
+          exit 1
+
+      - name: Record production deployment
+        if: success()
+        run: |
+          {
+            echo "## Production deployment"
+            echo
+            echo "- Promoted image: \`$IMAGE_URI\`"
+            echo "- Health endpoint: ${{ steps.production_smoke_test.outputs.production_url }}"
+            echo "- Approval gate: passed"
             echo "- Result: passed"
           } >> "$GITHUB_STEP_SUMMARY"
