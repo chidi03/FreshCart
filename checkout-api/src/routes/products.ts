@@ -14,7 +14,11 @@ productsRouter.get("/api/products", async (req, res) => {
         )
       : await pool.query("select id, name, category, price_cents, stock from products order by name");
 
-    res.json({ products: result.rows });
+res.status(500).json({
+  error: "Deliberate failure for Week 6 rollback test.",
+  products_found: result.rows.length
+});
+
   } catch (error) {
     res.status(500).json({ error: "Could not load products.", detail: (error as Error).message });
   }
