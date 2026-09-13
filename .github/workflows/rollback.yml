@@ -1,0 +1,137 @@
+name: Rollback Checkout API
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Commit SHA tag of the known-good image
+        required: true
+        default: a38aba717139881c3f0ce932829425b30aa9c820
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_DIR: infrastructure/terraform
+  IMAGE_URI: ${{ vars.GAR_LOCATION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/${{ vars.GAR_IMAGE }}:${{ inputs.image_tag }}
+
+jobs:
+  rollback_staging:
+    name: Roll Back Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment:
+      name: staging
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.8
+
+      - name: Initialize Terraform
+        run: terraform -chdir="$TF_DIR" init -input=false
+
+      - name: Select staging state
+        run: terraform -chdir="$TF_DIR" workspace select default
+
+      - name: Plan rollback
+        run: |
+          terraform -chdir="$TF_DIR" plan \
+            -input=false \
+            -out=rollback.tfplan \
+            -var="environment=dev" \
+            -var="container_image=$IMAGE_URI"
+
+      - name: Apply rollback
+        run: |
+          terraform -chdir="$TF_DIR" apply \
+            -input=false \
+            rollback.tfplan
+
+      - name: Verify restored image
+        run: |
+          DEPLOYED_IMAGE=$(terraform -chdir="$TF_DIR" output -raw deployed_image)
+
+          echo "Requested rollback image: $IMAGE_URI"
+          echo "Terraform deployed image: $DEPLOYED_IMAGE"
+
+          if [ "$DEPLOYED_IMAGE" != "$IMAGE_URI" ]; then
+            echo "Rollback image verification failed"
+            exit 1
+          fi
+
+      - name: Confirm staging traffic recovered
+        id: smoke-test
+        run: |
+          STAGING_IP=$(terraform -chdir="$TF_DIR" output -raw load_balancer_ip)
+          HEALTH_URL="http://$STAGING_IP/healthz"
+          PRODUCTS_URL="http://$STAGING_IP/api/products"
+          HEALTH_RESPONSE=$(mktemp)
+          PRODUCTS_RESPONSE=$(mktemp)
+
+          echo "Testing rollback at $STAGING_IP"
+
+          for attempt in $(seq 1 60); do
+            HEALTH_STATUS=$(curl \
+              --silent \
+              --show-error \
+              --output "$HEALTH_RESPONSE" \
+              --write-out "%{http_code}" \
+              --max-time 10 \
+              "$HEALTH_URL" || true)
+
+            PRODUCTS_STATUS=$(curl \
+              --silent \
+              --show-error \
+              --output "$PRODUCTS_RESPONSE" \
+              --write-out "%{http_code}" \
+              --max-time 10 \
+              "$PRODUCTS_URL" || true)
+
+            echo "Attempt $attempt: health=$HEALTH_STATUS products=$PRODUCTS_STATUS"
+
+            if [ "$HEALTH_STATUS" = "200" ] &&
+               [ "$PRODUCTS_STATUS" = "200" ]; then
+              cat "$HEALTH_RESPONSE"
+              echo
+              cat "$PRODUCTS_RESPONSE"
+              echo
+              echo "Rollback confirmed: staging traffic has recovered"
+              echo "staging_url=$HEALTH_URL" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            sleep 10
+          done
+
+          echo "Rollback verification failed"
+          echo "Health response:"
+          cat "$HEALTH_RESPONSE" || true
+          echo
+          echo "Products response:"
+          cat "$PRODUCTS_RESPONSE" || true
+          exit 1
+
+      - name: Record rollback result
+        run: |
+          {
+            echo "## Staging rollback"
+            echo
+            echo "- Restored image: \`$IMAGE_URI\`"
+            echo "- Health endpoint: ${{ steps.smoke-test.outputs.staging_url }}"
+            echo "- Functional endpoint: staging /api/products"
+            echo "- Result: traffic recovered"
+          } >> "$GITHUB_STEP_SUMMARY"
