@@ -8,6 +8,13 @@ apt-get update
 apt-get install -y ca-certificates curl docker.io python3
 
 systemctl enable docker
+install -d -m 0755 /opt/freshcart
+
+printf '%s' "${database_init_sql}" |
+        base64 --decode >/opt/freshcart/init.sql
+
+chmod 0444 /opt/freshcart/init.sql
+
 systemctl start docker
 
 docker network create freshcart-network || true
@@ -19,6 +26,7 @@ docker run -d \
 	-e POSTGRES_USER=freshcart \
 	-e POSTGRES_PASSWORD=freshcart \
 	-e POSTGRES_DB=freshcart \
+        -v /opt/freshcart/init.sql:/docker-entrypoint-initdb.d/init.sql:ro \
 	postgres:16-alpine
 
 for attempt in $(seq 1 30); do

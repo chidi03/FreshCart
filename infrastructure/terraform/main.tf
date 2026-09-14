@@ -102,8 +102,9 @@ resource "google_compute_instance_template" "backend" {
   }
 
   metadata_startup_script = templatefile("${path.module}/startup.sh", {
-    container_image = var.container_image
-    backend_port    = var.backend_port
+    container_image   = var.container_image
+    backend_port      = var.backend_port
+    database_init_sql = base64encode(file("${path.module}/../../checkout-api/db/init.sql"))
   })
 
   service_account {
