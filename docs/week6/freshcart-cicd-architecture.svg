@@ -1,0 +1,260 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2200" height="1400" viewBox="0 0 2200 1400" role="img" aria-labelledby="title desc">
+  <title id="title">FreshCart secure CI/CD and Google Cloud deployment architecture</title>
+  <desc id="desc">Architecture from pull request checks through Docker build, Trivy scanning, Artifact Registry, Terraform staging deployment, approval-gated production promotion, and rollback.</desc>
+  <defs>
+    <linearGradient id="page" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/><stop offset="1" stop-color="#EEF4FF"/>
+    </linearGradient>
+    <linearGradient id="bluePanel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EAF2FF"/><stop offset="1" stop-color="#F8FBFF"/>
+    </linearGradient>
+    <linearGradient id="greenPanel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EAFBF4"/><stop offset="1" stop-color="#F8FFFC"/>
+    </linearGradient>
+    <linearGradient id="amberPanel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFF7DF"/><stop offset="1" stop-color="#FFFDF6"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="7" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#2563EB"/></marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#059669"/></marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#DC2626"/></marker>
+    <marker id="arrowSlate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#475569"/></marker>
+
+    <symbol id="i-github" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="29" fill="#111827"/>
+      <circle cx="22" cy="20" r="5" fill="#fff"/><circle cx="42" cy="20" r="5" fill="#fff"/><circle cx="32" cy="44" r="5" fill="#fff"/>
+      <path d="M22 25v7c0 7 10 5 10 12M42 25v7c0 7-10 5-10 12" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-actions" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="29" fill="#2088FF"/>
+      <path d="M26 20l20 12-20 12z" fill="#fff"/><circle cx="18" cy="18" r="5" fill="#fff"/><path d="M18 23v8" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-node" viewBox="0 0 64 64">
+      <path d="M32 3l26 15v28L32 61 6 46V18z" fill="#339933"/>
+      <path d="M22 43V20l21 24V20" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-docker" viewBox="0 0 64 64">
+      <rect x="8" y="24" width="10" height="9" rx="1" fill="#2496ED"/><rect x="20" y="24" width="10" height="9" rx="1" fill="#2496ED"/><rect x="32" y="24" width="10" height="9" rx="1" fill="#2496ED"/><rect x="20" y="13" width="10" height="9" rx="1" fill="#2496ED"/><rect x="32" y="13" width="10" height="9" rx="1" fill="#2496ED"/>
+      <path d="M5 36h43c4 0 7-2 9-5 0 15-10 25-27 25C15 56 8 49 5 36z" fill="#2496ED"/><circle cx="47" cy="28" r="3" fill="#2496ED"/>
+    </symbol>
+    <symbol id="i-trivy" viewBox="0 0 64 64">
+      <path d="M32 4l23 9v17c0 15-9 25-23 30C18 55 9 45 9 30V13z" fill="#1904DA"/>
+      <path d="M20 32l8 8 17-19" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-oidc" viewBox="0 0 64 64">
+      <circle cx="24" cy="27" r="13" fill="none" stroke="#4285F4" stroke-width="6"/><path d="M34 36l21 21M45 47l6-6M51 53l6-6" stroke="#4285F4" stroke-width="6" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-registry" viewBox="0 0 64 64">
+      <path d="M32 4l25 14v28L32 60 7 46V18z" fill="#4285F4"/>
+      <path d="M7 18l25 15 25-15M32 33v27" fill="none" stroke="#fff" stroke-width="4"/><path d="M20 11l25 15" stroke="#fff" stroke-width="4" opacity=".7"/>
+    </symbol>
+    <symbol id="i-terraform" viewBox="0 0 64 64">
+      <path d="M8 10l18 10v20L8 30zM29 22l18 10v20L29 42zM29 0l18 10v18L29 18zM50 32l8-5v20l-8 5z" fill="#844FBA"/>
+    </symbol>
+    <symbol id="i-storage" viewBox="0 0 64 64">
+      <ellipse cx="32" cy="13" rx="23" ry="9" fill="#4285F4"/><path d="M9 13v36c0 5 10 9 23 9s23-4 23-9V13c0 5-10 9-23 9S9 18 9 13z" fill="#5F8FEA"/><path d="M9 31c0 5 10 9 23 9s23-4 23-9" fill="none" stroke="#fff" stroke-width="3" opacity=".75"/>
+    </symbol>
+    <symbol id="i-iam" viewBox="0 0 64 64">
+      <circle cx="32" cy="20" r="12" fill="#F9AB00"/><path d="M11 57c2-16 10-23 21-23s19 7 21 23" fill="#F9AB00"/><path d="M43 38l7 3v6c0 6-4 10-10 12-6-2-10-6-10-12v-6l7-3 3 5z" fill="#4285F4"/>
+    </symbol>
+    <symbol id="i-review" viewBox="0 0 64 64">
+      <circle cx="23" cy="19" r="11" fill="#F59E0B"/><path d="M5 52c2-14 8-20 18-20 7 0 13 4 16 12" fill="#FBBF24"/><circle cx="45" cy="44" r="15" fill="#059669"/><path d="M37 44l6 6 10-13" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-lb" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="27" fill="#4285F4"/><path d="M10 32h44M32 10c8 8 12 15 12 22S40 46 32 54M32 10c-8 8-12 15-12 22s4 14 12 22" fill="none" stroke="#fff" stroke-width="3"/>
+      <path d="M6 17h12M46 17h12M6 47h12M46 47h12" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-vpc" viewBox="0 0 64 64">
+      <path d="M19 51h30c8 0 13-5 13-12 0-6-4-11-10-12C50 15 42 8 31 8c-10 0-18 6-21 16C4 26 1 31 1 38c0 8 7 13 18 13z" fill="#34A853"/>
+      <circle cx="20" cy="35" r="5" fill="#fff"/><circle cx="43" cy="29" r="5" fill="#fff"/><circle cx="41" cy="44" r="5" fill="#fff"/><path d="M24 34l14-4M24 38l12 5" stroke="#fff" stroke-width="3"/>
+    </symbol>
+    <symbol id="i-mig" viewBox="0 0 64 64">
+      <rect x="8" y="8" width="40" height="36" rx="5" fill="#4285F4"/><rect x="16" y="18" width="24" height="5" rx="2" fill="#fff"/><rect x="16" y="29" width="16" height="5" rx="2" fill="#fff"/><path d="M18 48h36V16" fill="none" stroke="#0B57D0" stroke-width="6" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-vm" viewBox="0 0 64 64">
+      <rect x="8" y="8" width="48" height="48" rx="8" fill="#4285F4"/><rect x="19" y="19" width="26" height="26" rx="3" fill="#fff"/><path d="M26 27h12v10H26z" fill="#4285F4"/>
+      <path d="M3 20h5M3 32h5M3 44h5M56 20h5M56 32h5M56 44h5M20 3v5M32 3v5M44 3v5M20 56v5M32 56v5M44 56v5" stroke="#4285F4" stroke-width="3"/>
+    </symbol>
+    <symbol id="i-api" viewBox="0 0 64 64">
+      <rect x="5" y="8" width="54" height="48" rx="8" fill="#0F172A"/><path d="M25 22L15 32l10 10M39 22l10 10-10 10M36 17l-8 30" fill="none" stroke="#38BDF8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-db" viewBox="0 0 64 64">
+      <ellipse cx="32" cy="13" rx="23" ry="9" fill="#336791"/><path d="M9 13v37c0 5 10 9 23 9s23-4 23-9V13c0 5-10 9-23 9S9 18 9 13z" fill="#336791"/><path d="M9 31c0 5 10 9 23 9s23-4 23-9M9 47c0 5 10 9 23 9s23-4 23-9" fill="none" stroke="#fff" stroke-width="3" opacity=".75"/>
+    </symbol>
+    <symbol id="i-nat" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="27" fill="#EA4335"/><path d="M15 24h24l-7-7M49 40H25l7 7" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-rollback" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="28" fill="#DC2626"/><path d="M20 21v13h13M20 33c2-10 10-17 20-17 12 0 21 9 21 21S52 58 40 58c-8 0-15-4-19-10" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <style>
+      .title{font-family:'DejaVu Sans',Arial,sans-serif;font-size:42px;font-weight:700;fill:#0F172A}.subtitle{font-family:'DejaVu Sans',Arial,sans-serif;font-size:20px;fill:#475569}.section{font-family:'DejaVu Sans',Arial,sans-serif;font-size:19px;font-weight:700;letter-spacing:1.6px;fill:#334155}.box-title{font-family:'DejaVu Sans',Arial,sans-serif;font-size:20px;font-weight:700;fill:#0F172A}.box-text{font-family:'DejaVu Sans',Arial,sans-serif;font-size:16px;fill:#475569}.tiny{font-family:'DejaVu Sans',Arial,sans-serif;font-size:14px;fill:#64748B}.pill{font-family:'DejaVu Sans',Arial,sans-serif;font-size:14px;font-weight:700}.arrow-label{font-family:'DejaVu Sans',Arial,sans-serif;font-size:14px;font-weight:700;fill:#334155}.mono{font-family:'DejaVu Sans Mono',monospace;font-size:13px;fill:#334155}.card{fill:#fff;stroke:#CBD5E1;stroke-width:2;filter:url(#shadow)}.line{fill:none;stroke:#2563EB;stroke-width:4;marker-end:url(#arrowBlue)}.line-green{fill:none;stroke:#059669;stroke-width:4;marker-end:url(#arrowGreen)}.line-red{fill:none;stroke:#DC2626;stroke-width:4;stroke-dasharray:10 8;marker-end:url(#arrowRed)}.line-slate{fill:none;stroke:#475569;stroke-width:3;marker-end:url(#arrowSlate)}
+    </style>
+  </defs>
+
+  <rect width="2200" height="1400" fill="url(#page)"/>
+  <rect x="0" y="0" width="2200" height="105" fill="#0F172A"/>
+  <text x="58" y="55" class="title" style="fill:#FFFFFF">FreshCart Secure CI/CD &amp; Google Cloud Architecture</text>
+  <text x="60" y="84" class="subtitle" fill="#CBD5E1">Pull request validation → immutable image → staging → approval → production → tested rollback</text>
+
+  <!-- SOURCE AND CI -->
+  <rect x="45" y="130" width="2110" height="300" rx="24" fill="url(#bluePanel)" stroke="#93C5FD" stroke-width="2"/>
+  <text x="72" y="167" class="section">1 · SOURCE CONTROL AND CONTINUOUS INTEGRATION</text>
+
+  <rect x="82" y="195" width="265" height="185" rx="18" class="card"/>
+  <use xlink:href="#i-github" x="105" y="220" width="64" height="64"/>
+  <text x="186" y="244" class="box-title">GitHub repository</text>
+  <text x="186" y="270" class="box-text">chidi03/FreshCart</text>
+  <rect x="105" y="307" width="208" height="36" rx="18" fill="#E2E8F0"/>
+  <text x="209" y="330" class="pill" fill="#334155" text-anchor="middle">feature branch + PR</text>
+  <text x="105" y="365" class="tiny">Protected merge path to main</text>
+
+  <path d="M347 275H420" class="line"/>
+  <text x="383" y="258" class="arrow-label" text-anchor="middle">pull_request</text>
+
+  <rect x="420" y="195" width="420" height="185" rx="18" class="card"/>
+  <use xlink:href="#i-actions" x="444" y="216" width="60" height="60"/>
+  <text x="522" y="241" class="box-title">Checkout API CI</text>
+  <text x="522" y="267" class="box-text">GitHub Actions · ubuntu-latest</text>
+  <use xlink:href="#i-node" x="452" y="301" width="43" height="43"/>
+  <text x="510" y="318" class="box-text">Node 20 + npm cache</text>
+  <text x="510" y="343" class="box-text">npm ci → build/typecheck</text>
+  <rect x="685" y="303" width="118" height="34" rx="17" fill="#DCFCE7"/>
+  <text x="744" y="325" class="pill" fill="#047857" text-anchor="middle">merge gate</text>
+
+  <path d="M840 275H905" class="line"/>
+  <text x="872" y="258" class="arrow-label" text-anchor="middle">push: main</text>
+
+  <rect x="905" y="195" width="570" height="185" rx="18" class="card"/>
+  <text x="930" y="231" class="box-title">Build, Scan and Push</text>
+  <text x="930" y="257" class="box-text">One trusted workflow creates the deployable artifact</text>
+  <use xlink:href="#i-docker" x="942" y="285" width="58" height="58"/>
+  <text x="1013" y="310" class="box-title">Docker build</text><text x="1013" y="334" class="tiny">multi-stage · non-root</text>
+  <path d="M1160 315h48" class="line-slate"/>
+  <use xlink:href="#i-trivy" x="1220" y="285" width="58" height="58"/>
+  <text x="1290" y="310" class="box-title">Trivy gate</text><text x="1290" y="334" class="tiny">fail HIGH / CRITICAL</text>
+
+  <path d="M1475 275H1535" class="line"/>
+  <text x="1505" y="258" class="arrow-label" text-anchor="middle">clean only</text>
+
+  <rect x="1535" y="195" width="570" height="185" rx="18" class="card"/>
+  <use xlink:href="#i-oidc" x="1560" y="214" width="60" height="60"/>
+  <text x="1635" y="238" class="box-title">OIDC → Workload Identity Federation</text>
+  <text x="1635" y="264" class="box-text">Short-lived token; no stored GCP key</text>
+  <use xlink:href="#i-registry" x="1580" y="296" width="58" height="58"/>
+  <text x="1652" y="315" class="box-title">Artifact Registry</text>
+  <text x="1652" y="340" class="box-text">freshcart-images / checkout-api</text>
+  <text x="1652" y="365" class="mono">tag: ${GITHUB_SHA}</text>
+
+  <!-- DELIVERY CONTROL PLANE -->
+  <rect x="45" y="458" width="2110" height="292" rx="24" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>
+  <text x="72" y="495" class="section">2 · DELIVERY CONTROL PLANE</text>
+
+  <rect x="82" y="522" width="315" height="180" rx="18" class="card"/>
+  <use xlink:href="#i-actions" x="108" y="548" width="58" height="58"/>
+  <text x="182" y="571" class="box-title">Deploy Checkout API</text>
+  <text x="182" y="597" class="box-text">workflow_run after successful</text>
+  <text x="182" y="621" class="box-text">build/scan/push on main</text>
+  <rect x="108" y="647" width="254" height="34" rx="17" fill="#DBEAFE"/>
+  <text x="235" y="669" class="pill" fill="#1D4ED8" text-anchor="middle">same commit-SHA image</text>
+
+  <path d="M397 612H472" class="line"/>
+
+  <rect x="472" y="522" width="318" height="180" rx="18" class="card"/>
+  <use xlink:href="#i-terraform" x="499" y="548" width="58" height="58"/>
+  <text x="572" y="571" class="box-title">Terraform</text>
+  <text x="572" y="597" class="box-text">plan + saved plan + apply</text>
+  <text x="572" y="621" class="box-text">default / production workspaces</text>
+  <text x="500" y="669" class="tiny">Creates templates, MIGs, LBs, IAM and networks</text>
+
+  <path d="M790 574H875" class="line-slate"/>
+  <path d="M790 650H875" class="line-slate"/>
+
+  <rect x="875" y="522" width="316" height="180" rx="18" class="card"/>
+  <use xlink:href="#i-iam" x="902" y="548" width="58" height="58"/>
+  <text x="975" y="571" class="box-title">Google Cloud IAM</text>
+  <text x="975" y="597" class="box-text">terraform-deployer SA</text>
+  <text x="975" y="621" class="box-text">runtime SA · GAR Reader</text>
+  <text x="902" y="669" class="tiny">Least-privilege workload identities</text>
+
+  <rect x="1252" y="522" width="310" height="180" rx="18" class="card"/>
+  <use xlink:href="#i-storage" x="1279" y="548" width="58" height="58"/>
+  <text x="1352" y="571" class="box-title">GCS remote state</text>
+  <text x="1352" y="597" class="box-text">week5/state</text>
+  <text x="1352" y="621" class="box-text">workspace isolation</text>
+  <text x="1279" y="669" class="tiny">Shared, persistent Terraform state</text>
+
+  <path d="M1191 574H1252" class="line-slate"/>
+
+  <rect x="1624" y="522" width="481" height="180" rx="18" fill="url(#amberPanel)" stroke="#FBBF24" stroke-width="2" filter="url(#shadow)"/>
+  <use xlink:href="#i-review" x="1652" y="548" width="64" height="64"/>
+  <text x="1732" y="571" class="box-title">Production environment gate</text>
+  <text x="1732" y="598" class="box-text">Required reviewer approval in GitHub</text>
+  <text x="1732" y="624" class="box-text">Production job waits here after staging passes</text>
+  <rect x="1652" y="649" width="418" height="34" rx="17" fill="#FEF3C7"/>
+  <text x="1861" y="671" class="pill" fill="#92400E" text-anchor="middle">promote artifact · do not rebuild</text>
+
+  <!-- RUNTIME -->
+  <rect x="45" y="780" width="1018" height="495" rx="24" fill="url(#greenPanel)" stroke="#6EE7B7" stroke-width="2"/>
+  <text x="72" y="820" class="section">3A · STAGING · TERRAFORM DEFAULT WORKSPACE</text>
+  <rect x="72" y="842" width="964" height="398" rx="20" fill="#fff" stroke="#A7F3D0" stroke-width="2"/>
+  <text x="96" y="875" class="box-title">Google Cloud project · chidi-cloud-security-lab</text>
+  <rect x="92" y="900" width="180" height="124" rx="16" class="card"/>
+  <use xlink:href="#i-lb" x="112" y="918" width="58" height="58"/><text x="183" y="941" class="box-title">Global LB</text><text x="183" y="967" class="box-text">HTTP :80</text><text x="112" y="1002" class="mono">34.54.34.78</text>
+  <path d="M272 960H328" class="line-green"/>
+  <rect x="328" y="900" width="666" height="300" rx="20" fill="#F0FDF4" stroke="#22C55E" stroke-width="2"/>
+  <use xlink:href="#i-vpc" x="352" y="920" width="55" height="55"/><text x="421" y="943" class="box-title">freshcart-dev-vpc</text><text x="421" y="969" class="box-text">backend subnet 10.10.0.0/24</text>
+  <use xlink:href="#i-nat" x="876" y="920" width="50" height="50"/><text x="938" y="945" class="box-text">Cloud NAT</text>
+  <rect x="358" y="997" width="605" height="170" rx="16" fill="#fff" stroke="#86EFAC" stroke-width="2"/>
+  <use xlink:href="#i-mig" x="382" y="1021" width="56" height="56"/><text x="452" y="1044" class="box-title">Regional managed instance group</text><text x="452" y="1070" class="box-text">instance template · proactive replacement</text>
+  <use xlink:href="#i-vm" x="390" y="1092" width="48" height="48"/><text x="452" y="1114" class="box-text">Debian VM</text><text x="452" y="1136" class="tiny">Docker network</text>
+  <rect x="570" y="1082" width="177" height="70" rx="12" fill="#F8FAFC" stroke="#CBD5E1"/><use xlink:href="#i-api" x="582" y="1091" width="48" height="48"/><text x="640" y="1113" class="box-title">Checkout API</text><text x="640" y="1136" class="tiny">3000 → 80</text>
+  <rect x="770" y="1082" width="169" height="70" rx="12" fill="#F8FAFC" stroke="#CBD5E1"/><use xlink:href="#i-db" x="782" y="1091" width="48" height="48"/><text x="840" y="1113" class="box-title">Postgres</text><text x="840" y="1136" class="tiny">init.sql seed</text>
+  <path d="M747 1117H770" class="line-slate"/>
+  <rect x="92" y="1056" width="218" height="144" rx="16" fill="#ECFDF5" stroke="#6EE7B7"/>
+  <text x="112" y="1085" class="box-title">Smoke test</text>
+  <text x="112" y="1113" class="box-text">GET /healthz → 200</text>
+  <text x="112" y="1140" class="box-text">GET /api/products → 200</text>
+  <rect x="112" y="1158" width="160" height="27" rx="13" fill="#D1FAE5"/><text x="192" y="1177" class="pill" fill="#047857" text-anchor="middle">gate production</text>
+
+  <rect x="1137" y="780" width="1018" height="495" rx="24" fill="url(#bluePanel)" stroke="#93C5FD" stroke-width="2"/>
+  <text x="1235" y="820" class="section">3B · PRODUCTION · TERRAFORM PRODUCTION WORKSPACE</text>
+  <rect x="1164" y="842" width="964" height="398" rx="20" fill="#fff" stroke="#BFDBFE" stroke-width="2"/>
+  <text x="1188" y="875" class="box-title">Google Cloud project · isolated production resources</text>
+  <rect x="1184" y="900" width="180" height="124" rx="16" class="card"/>
+  <use xlink:href="#i-lb" x="1204" y="918" width="58" height="58"/><text x="1275" y="941" class="box-title">Global LB</text><text x="1275" y="967" class="box-text">HTTP :80</text><text x="1204" y="1002" class="mono">136.68.253.208</text>
+  <path d="M1364 960H1420" class="line"/>
+  <rect x="1420" y="900" width="666" height="300" rx="20" fill="#EFF6FF" stroke="#60A5FA" stroke-width="2"/>
+  <use xlink:href="#i-vpc" x="1444" y="920" width="55" height="55"/><text x="1513" y="943" class="box-title">freshcart-prod-vpc</text><text x="1513" y="969" class="box-text">backend subnet 10.10.0.0/24</text>
+  <use xlink:href="#i-nat" x="1968" y="920" width="50" height="50"/><text x="2030" y="945" class="box-text">Cloud NAT</text>
+  <rect x="1450" y="997" width="605" height="170" rx="16" fill="#fff" stroke="#93C5FD" stroke-width="2"/>
+  <use xlink:href="#i-mig" x="1474" y="1021" width="56" height="56"/><text x="1544" y="1044" class="box-title">Regional managed instance group</text><text x="1544" y="1070" class="box-text">same SHA promoted from staging</text>
+  <use xlink:href="#i-vm" x="1482" y="1092" width="48" height="48"/><text x="1544" y="1114" class="box-text">Debian VM</text><text x="1544" y="1136" class="tiny">Docker network</text>
+  <rect x="1662" y="1082" width="177" height="70" rx="12" fill="#F8FAFC" stroke="#CBD5E1"/><use xlink:href="#i-api" x="1674" y="1091" width="48" height="48"/><text x="1732" y="1113" class="box-title">Checkout API</text><text x="1732" y="1136" class="tiny">3000 → 80</text>
+  <rect x="1862" y="1082" width="169" height="70" rx="12" fill="#F8FAFC" stroke="#CBD5E1"/><use xlink:href="#i-db" x="1874" y="1091" width="48" height="48"/><text x="1932" y="1113" class="box-title">Postgres</text><text x="1932" y="1136" class="tiny">init.sql seed</text>
+  <path d="M1839 1117H1862" class="line-slate"/>
+  <rect x="1184" y="1056" width="218" height="144" rx="16" fill="#EFF6FF" stroke="#93C5FD"/>
+  <text x="1204" y="1085" class="box-title">Post-deploy check</text>
+  <text x="1204" y="1113" class="box-text">Exact image verified</text>
+  <text x="1204" y="1140" class="box-text">/healthz → 200</text>
+  <rect x="1204" y="1158" width="160" height="27" rx="13" fill="#DBEAFE"/><text x="1284" y="1177" class="pill" fill="#1D4ED8" text-anchor="middle">release recorded</text>
+
+  <!-- Cross-environment and rollback flows -->
+  <path d="M1000 866C1090 810 1120 810 1200 866" class="line-green"/>
+  <rect x="986" y="790" width="225" height="50" rx="25" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2"/>
+  <use xlink:href="#i-review" x="999" y="797" width="38" height="38"/><text x="1048" y="821" class="pill" fill="#92400E">reviewer approval</text>
+
+  <rect x="45" y="1305" width="2110" height="66" rx="20" fill="#FFF1F2" stroke="#FDA4AF" stroke-width="2"/>
+  <use xlink:href="#i-rollback" x="65" y="1311" width="54" height="54"/>
+  <text x="135" y="1335" class="box-title" fill="#991B1B">Manual rollback workflow</text>
+  <text x="135" y="1358" class="box-text">workflow_dispatch selects a previous known-good Artifact Registry SHA → Terraform replaces staging template/MIG → verifies exact image + /healthz + /api/products</text>
+  <path d="M875 1305C810 1270 720 1262 610 1240" class="line-red"/>
+  <path d="M1460 1305C1515 1270 1590 1262 1680 1240" fill="none" stroke="#94A3B8" stroke-width="3" stroke-dasharray="8 8"/>
+
+  <rect x="1590" y="112" width="560" height="42" rx="21" fill="#0F172A" opacity=".96"/>
+  <circle cx="1618" cy="133" r="7" fill="#22C55E"/><text x="1635" y="139" class="pill" fill="#fff">Security gate</text>
+  <circle cx="1768" cy="133" r="7" fill="#2563EB"/><text x="1785" y="139" class="pill" fill="#fff">delivery path</text>
+  <circle cx="1912" cy="133" r="7" fill="#DC2626"/><text x="1929" y="139" class="pill" fill="#fff">rollback path</text>
+</svg>
